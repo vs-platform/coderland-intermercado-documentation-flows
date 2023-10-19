@@ -1,0 +1,96 @@
+@startuml C4
+
+title "High Level Architecture - API Intermercado V4.0 API GATEWAY"
+
+' Uncomment the line below for "dark mode" styling
+!$AWS_DARK = true
+
+!include <C4/C4_Container>
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v16.0/dist
+!include AWSPuml/AWSCommon.puml
+!include AWSPuml/AWSC4Integration.puml
+!include AWSPuml/ApplicationIntegration/APIGateway.puml
+!include AWSPuml/Compute/LambdaLambdaFunction.puml
+!include AWSPuml/Groups/all.puml
+!include AWSPuml/Database/DocumentDB.puml
+!include AWSPuml/Compute/EC2.puml
+!include AWSPuml/BusinessApplications/SimpleEmailServiceEmail.puml
+!include AWSPuml/Blockchain/Blockchain.puml
+
+' Initial Configuration
+hide stereotype
+skinparam linetype orto
+left to right direction
+
+' Experimental tag based Element formatting
+!procedure $AWSC4AddElementTag($category, $icon)
+!$tagborder = $AWSColor($category)
+!if %variable_exists("$AWS_DARK") && ($AWS_DARK == true) && ($category == "General")
+!$tagimgext = '_Dark.png'
+!$tagborder = $AWS_FG_COLOR
+!else
+!$tagimgext = '.png'
+!endif
+!$tagimg = 'img:' + AWSPuml + '/' + $category + '/' + $icon + $tagimgext
+AddElementTag("$icon", $fontColor=$AWS_FG_COLOR, $borderColor=$tagborder, $bgColor=$AWS_BG_COLOR, $sprite=$tagimg{scale=0.5}, $legendSprite=$tagimg{scale=0.25})
+!endprocedure
+
+!procedure $AWSIcon($service, $line1, $line2="")
+rectangle "$AWSImg($service)\n<b>$line1</b>\n$line2"
+!endprocedure
+
+' white text in a black box
+!procedure $stepnum($number)
+<back:black><color:white><b> $number </b></color></back>\n
+!endprocedure
+
+' Adding Tags Values
+$AWSC4AddElementTag("General", "User")
+$AWSC4AddElementTag("General", "Internet")
+$AWSC4AddElementTag("Compute", "EC2")
+$AWSC4AddElementTag("Database", "DocumentDB")
+
+AWSCloudGroup(softwareSystem, "Intermercado Cloud") {
+    VPCGroup(vpc_group, "VPC vpc-ID"){
+        RegionGroup(region, "Region (us-east-1)") {
+            EC2InstanceContentsGroup(ec2_instances, "EC2-Instances"){
+                Container(ec2_backend_legacy_code_v3, "Intermercado V3.0 Legacy Code", $tags="EC2")
+                Container(ec2_backend_legacy_code_v2, "Intermercado V2.0 ADF - WAR - Legacy Code", $tags="EC2")
+                Container(ec2_backend_gateway_v4, "Intermercado V4 Gateway Service - Springboot", $tags="EC2")
+                Container(ec2_backend_finance_service_v4, "Intermercado V4 Finance Service - Springboot", $tags="EC2")
+                Container(ec2_frontend_legacy_v2, "Intermercado FrontEnd V2 - Vuejs", $tags="EC2")
+            }
+        }
+
+        ec2_frontend_legacy_v2 -d-> ec2_backend_legacy_code_v3 : "Request & Response Source from Backend Service Legacy V3.0"
+        ec2_frontend_legacy_v2 -d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service Legacy V4.0"
+        ec2_backend_legacy_code_v3 <-d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service - RestTemplate (HTTP) - Legacy V3.0"
+        ec2_backend_legacy_code_v2 <-d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service - RestTemplate (HTTP) - Legacy V2.0"
+        ec2_backend_gateway_v4 <-d-> ec2_backend_finance_service_v4 : "Request & Response Source from Backend Service Legacy [V3.0, V2.0, Frontend-Vuejs-V2.0]"
+    }
+}
+
+PrivateSubnetGroup(security_providers, "Security Providers Networks"){
+    CorporateDataCenterGroup(cloudflare_provider, "Cloudflare") {
+        Container(cloudflare, "Cloudflare Network DNS protection", $tags="Internet")
+    }
+    cloudflare -> ec2_frontend_legacy_v2 : "Request & Response Payload"
+}
+
+PrivateSubnetGroup(providers_companies, "Providers Networks"){
+    CorporateDataCenterGroup(sql_server_provider, "SQL Server Provider Instance") {
+        Container(sql_server_gbplus, "SQL Server GbPlus - Instance", $tags="DocumentDB")
+    }
+
+    ec2_backend_legacy_code_v2 <-d-> sql_server_gbplus : "DML Actions Java - Intermercado V2.0 ADF - WAR - Legacy Code"
+    ec2_backend_legacy_code_v3 <-d-> sql_server_gbplus : "DML Actions Java - Intermercado V3.0 - Legacy Code"
+    ec2_backend_finance_service_v4 <-d-> sql_server_gbplus : "DML Actions Java JPA Spring boot - Intermercado V4.0 Finance Service"
+}
+
+Person(user, "User", $tags="User")
+user -d-> cloudflare : "User Platform Actions V3.0"
+user -d-> ec2_backend_legacy_code_v2 : "User Platform Actions V2.0 JSF WAR"
+
+SHOW_LEGEND(false)
+C4VersionDetails()
+@enduml
