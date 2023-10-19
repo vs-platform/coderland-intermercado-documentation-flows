@@ -56,11 +56,10 @@ AWSCloudGroup(softwareSystem, "Intermercado Cloud") {
         RegionGroup(region, "Region (us-east-1)") {
             EC2InstanceContentsGroup(ec2_instances, "EC2-Instances"){
                 Container(ec2_backend_legacy_code_v3, "Intermercado V3.0 Legacy Code", $tags="EC2")
-                Container(ec2_backend_gateway_v3, "Intermercado V3 Gateway Service - Springboot", $tags="EC2")
-                Container(ec2_backend_finance_service_v3, "Intermercado V3 Finance Service - Springboot", $tags="EC2")
-                Container(ec2_backend_eureka_service_v3, "Intermercado V3 Eureka Service Discovery - Springboot", $tags="EC2")
+                Container(ec2_backend_gateway_v3, "Intermercado V3.1 Gateway Service - Springboot", $tags="EC2")
+                Container(ec2_backend_finance_service_v3, "Intermercado V3.1 Finance Service - Springboot", $tags="EC2")
+                Container(ec2_backend_eureka_service_v3, "Intermercado V3.1 Eureka Service Discovery - Springboot", $tags="EC2")
                 Container(ec2_frontend_legacy_v2, "Intermercado FrontEnd V2 - Vuejs", $tags="EC2")
-
             }
         }
 
