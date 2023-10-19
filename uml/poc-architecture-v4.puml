@@ -49,24 +49,35 @@ $AWSC4AddElementTag("General", "User")
 $AWSC4AddElementTag("General", "Internet")
 $AWSC4AddElementTag("Compute", "EC2")
 $AWSC4AddElementTag("Database", "DocumentDB")
+$AWSC4AddElementTag("Storage", "SimpleStorageServiceBucket")
 
 AWSCloudGroup(softwareSystem, "Intermercado Cloud") {
     VPCGroup(vpc_group, "VPC vpc-ID"){
         RegionGroup(region, "Region (us-east-1)") {
             EC2InstanceContentsGroup(ec2_instances, "EC2-Instances"){
                 Container(ec2_backend_legacy_code_v3, "Intermercado V3.0 Legacy Code", $tags="EC2")
-                Container(ec2_backend_legacy_code_v2, "Intermercado V2.0 ADF - WAR - Legacy Code", $tags="EC2")
-                Container(ec2_backend_gateway_v4, "Intermercado V4 Gateway Service - Springboot", $tags="EC2")
-                Container(ec2_backend_finance_service_v4, "Intermercado V4 Finance Service - Springboot", $tags="EC2")
+                Container(ec2_backend_gateway_v3, "Intermercado V3 Gateway Service - Springboot", $tags="EC2")
+                Container(ec2_backend_finance_service_v3, "Intermercado V3 Finance Service - Springboot", $tags="EC2")
+                Container(ec2_backend_eureka_service_v3, "Intermercado V3 Eureka Service Discovery - Springboot", $tags="EC2")
                 Container(ec2_frontend_legacy_v2, "Intermercado FrontEnd V2 - Vuejs", $tags="EC2")
+
             }
         }
 
+        ' # Eureka Discovery
+        ec2_backend_gateway_v3 -r-> ec2_backend_eureka_service_v3  : "Service Discovery Gateway"
+        ec2_backend_finance_service_v3 -r-> ec2_backend_eureka_service_v3 : "Service Discovery Finance"
+
         ec2_frontend_legacy_v2 -d-> ec2_backend_legacy_code_v3 : "Request & Response Source from Backend Service Legacy V3.0"
-        ec2_frontend_legacy_v2 -d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service Legacy V4.0"
-        ec2_backend_legacy_code_v3 <-d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service - RestTemplate (HTTP) - Legacy V3.0"
-        ec2_backend_legacy_code_v2 <-d-> ec2_backend_gateway_v4 : "Request & Response Source from Backend Service - RestTemplate (HTTP) - Legacy V2.0"
-        ec2_backend_gateway_v4 <-d-> ec2_backend_finance_service_v4 : "Request & Response Source from Backend Service Legacy [V3.0, V2.0, Frontend-Vuejs-V2.0]"
+        ec2_frontend_legacy_v2 -d-> ec2_backend_gateway_v3 : "Request & Response Source from Backend Service Legacy V3.0"
+        ec2_backend_legacy_code_v3 <-d-> ec2_backend_gateway_v3 : "Request & Response Source from Backend Service - RestTemplate (HTTP) - Legacy V3.0"
+        ec2_backend_gateway_v3 <-d-> ec2_backend_finance_service_v3 : "Request & Response Source from Backend Service Legacy [V3.0, Frontend-Vuejs-V2.0]"
+
+        Container(s3bucket, "Amazon S3 bucket", $tags="SimpleStorageServiceBucket")
+        Container(aws_cloudfront, "Cloud Front", $tags="Internet")
+        ec2_backend_legacy_code_v3 -u-> s3bucket : "Upload attachments Bucket"
+        ec2_backend_finance_service_v3 -u-> s3bucket : "Upload attachments Bucket"
+        aws_cloudfront -d-> s3bucket : "S3 Access Attachments"
     }
 }
 
@@ -82,14 +93,13 @@ PrivateSubnetGroup(providers_companies, "Providers Networks"){
         Container(sql_server_gbplus, "SQL Server GbPlus - Instance", $tags="DocumentDB")
     }
 
-    ec2_backend_legacy_code_v2 <-d-> sql_server_gbplus : "DML Actions Java - Intermercado V2.0 ADF - WAR - Legacy Code"
     ec2_backend_legacy_code_v3 <-d-> sql_server_gbplus : "DML Actions Java - Intermercado V3.0 - Legacy Code"
-    ec2_backend_finance_service_v4 <-d-> sql_server_gbplus : "DML Actions Java JPA Spring boot - Intermercado V4.0 Finance Service"
+    ec2_backend_finance_service_v3 <-d-> sql_server_gbplus : "DML Actions Java JPA Spring boot - Intermercado V4.0 Finance Service"
 }
 
 Person(user, "User", $tags="User")
 user -d-> cloudflare : "User Platform Actions V3.0"
-user -d-> ec2_backend_legacy_code_v2 : "User Platform Actions V2.0 JSF WAR"
+user -d-> aws_cloudfront : "Middleware LoadBalancer Access Attachments"
 
 SHOW_LEGEND(false)
 C4VersionDetails()
